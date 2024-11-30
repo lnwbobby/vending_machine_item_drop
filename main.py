@@ -5,6 +5,7 @@ from collections import deque
 import os
 import redis
 import logging
+import configparser
 # logging.basicConfig(level=logging.CRITICAL)  # Configure logging level
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 redis_host = os.environ.get("REDIS_HOST", "localhost")
@@ -18,6 +19,41 @@ except Exception as e:
 if r is None:
     raise ConnectionError("Redis connection unavailable. Please check your Redis setup.")
 
+def load_config(config_file='config.ini'):
+    config = configparser.ConfigParser()
+    try:
+        config.read(config_file)
+        if not config.sections():
+            logging.critical("Error: No sections found in the configuration file.")
+            return None
+
+        camera_config = config['camera']
+        settings_config = config['settings']
+        roi_config = config['roi']
+        
+        # Parse ROI points
+        roi_points = list(map(int, roi_config.get('points').split(',')))
+        roi_pts = np.array(roi_points, np.int32).reshape((-1, 2))
+
+        # Return the configurations as a dictionary
+        config_data = {
+            'username': camera_config.get('username'),
+            'password': camera_config.get('password'),
+            'camera_ip': camera_config.get('camera_ip'),
+            'port': camera_config.get('port'),
+            'channel': camera_config.get('channel'),
+            'subtype': camera_config.get('subtype'),
+            'threshold': settings_config.getint('threshold'),
+            'detect_frame': settings_config.getint('detect_frame'),
+            'roi_pts': roi_pts
+        }
+        
+        logging.info("Configuration loaded successfully.")
+        return config_data
+
+    except Exception as e:
+        logging.critical(f"Error loading configuration: {e}")
+        return None
 
 def get_queue():
     try:
@@ -74,16 +110,18 @@ def setup_video_capture(video_path):
 # Main function to initialize parameters and start detection
 def main():
     # video_path = 0
-    username = "admin"
-    password = "!P@ssw0rd!"
-    camera_ip = "192.168.0.108"
-    port = "554"
-    channel = "1"
-    subtype = "0"
-    threshold = 1500000
-    detect_frame = 25
+    config = load_config()
+    if config:
+        username = config['username']
+        password = config['password']
+        camera_ip = config['camera_ip']
+        port = config['port']
+        channel = config['channel']
+        subtype = config['subtype']
+        threshold = config['threshold']
+        detect_frame = config['detect_frame']
+        roi_pts = config['roi_pts']
     rtsp_url = f"rtsp://{username}:{password}@{camera_ip}:{port}/cam/realmonitor?channel={channel}&subtype={subtype}"
-    roi_pts = np.array([[615, 720], [1270, 719], [1270, 570], [615, 570]], np.int32)
 
     try:
         while True :
