@@ -1,4 +1,4 @@
-# Jett_vending_machine_item_drop
+# Vending_machine_item_drop
 
 ## Python Version
 
