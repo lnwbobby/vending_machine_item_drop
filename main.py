@@ -63,7 +63,7 @@ def get_queue():
         else:
             return False, ''
     except Exception as e:
-        logging.critical("Order Empty")
+        # logging.critical("Order Empty")
         return False, ''
 
 def put_response( status):
@@ -127,20 +127,22 @@ def main():
         while True :
             try:
                 get_q_sta, order = get_queue()
+                # logging.info("Version 3 ")
                 if order == 'START' :
-                    cap = setup_video_capture(rtsp_url)
-                    cap = setup_video_capture(0)
-                    if not cap:
-                        return
-
+                    logging.info("GET QUEUE")
                     order = None
+                    cap = setup_video_capture(rtsp_url)
+                    
+                    if cap == None :
+                        continue
+
                     start_time = time.time()
                     count_detection = 0
                     ret = None
 
                     while((time.time()-start_time) < 300):
                         get_q_sta, order = get_queue()
-                        time.sleep(0.1) # time
+                        # time.sleep(0.1) # time
                         if (order == 'STOP'):
                             order = None
                             break
@@ -163,9 +165,12 @@ def main():
                         # logging.info("Change value: %d", change)
                         if change > threshold:
                             count_detection += 1
-                            # logging.info("Item drop detected : %d", count_detection)
+                            
+                            logging.info("Item drop detected : %d", count_detection)
 
                         if count_detection >= detect_frame :
+                            filename = f"frame_lasted.jpg"
+                            cv2.imwrite(filename, frame)
                             put_response('S0')
                             logging.info("Response 'S0' sent to Redis.")
                             # print("Put Response")
